@@ -87,17 +87,44 @@ const BuyStarsScreen: React.FC<BuyStarsScreenProps> = ({ onCreateOrder }) => {
         setConfirmModalOpen(true);
     };
 
-    const handleConfirmPurchase = () => {
-        if (foundUser && selectedPlan && selectedPaymentMethod) {
-            const orderDetails: OrderDetails = {
-                recipient: foundUser,
-                stars: selectedPlan.stars,
-                priceFormatted: selectedPlan.priceFormatted,
-                paymentMethod: selectedPaymentMethod,
-            };
-            onCreateOrder(orderDetails);
+    const handleConfirmPurchase = async () => {
+    if (foundUser && selectedPlan && selectedPaymentMethod) {
+        setIsLoading(true); // Yuklanish indikatorini yoqamiz
+
+        // Botga yuboriladigan ma'lumotlar
+        const orderData = {
+            recipient: foundUser,
+            stars: selectedPlan.stars,
+            price: selectedPlan.priceFormatted,
+            paymentMethod: selectedPaymentMethod,
+            // Ilovani kim ishlatayotgan bo'lsa, o'shaning IDsi (bot unga SMS yuboradi)
+            senderId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id 
+        };
+
+        try {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ymastar-production.up.railway.app';
+            
+            const response = await fetch(`${API_BASE_URL}/api/create-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData),
+            });
+
+            if (response.ok) {
+                setConfirmModalOpen(false);
+                // Muvaffaqiyatli bo'lsa, WebApp ni yopamiz, foydalanuvchi botga qaytadi
+                window.Telegram?.WebApp?.close();
+            } else {
+                setError("Buyurtma berishda xatolik yuz berdi.");
+            }
+        } catch (err) {
+            console.error(err);
+            setError("Server bilan bog'lanishda xato.");
+        } finally {
+            setIsLoading(false);
         }
-    };
+    }
+};
     
     const isValid = foundUser && starAmount && parseInt(starAmount, 10) > 0 && selectedPlan;
 

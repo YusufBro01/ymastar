@@ -1,18 +1,18 @@
 import type { User } from '../types';
 
-// 1. Manzil oxirida / belgisini tekshiring. 
-// Railway'da VITE_API_URL oxirida / bo'lmasligi kerak.
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Railway manzilingizni tekshiring (oxirida slash bo'lmasin)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://tez-star-production.up.railway.app';
 
 export const findUserByUsername = async (username: string): Promise<User | null> => {
-  // Username'dan faqat toza matnni olamiz
-  const cleanUsername = username.replace('@', '').trim();
+  // 1. Foydalanuvchi kiritgan matnni tozalaymiz
+  // Boshidagi barcha @ belgilarini va bo'sh joylarni olib tashlaymiz
+  const cleanUsername = username.trim().replace(/^@+/, '');
   
   if (cleanUsername.length < 3) return null;
 
   try {
     const targetUrl = `${API_BASE_URL}/api/user/${cleanUsername}`;
-    console.log(`So'rov yuborilmoqda: ${targetUrl}`);
+    console.log(`Telegram qidiruv so'rovi yuborilmoqda: ${targetUrl}`);
 
     const response = await fetch(targetUrl, {
       method: 'GET',
@@ -22,27 +22,30 @@ export const findUserByUsername = async (username: string): Promise<User | null>
     });
 
     if (!response.ok) {
-      console.warn(`API xatosi: ${response.status}`);
+      console.warn(`Foydalanuvchi topilmadi (Status: ${response.status})`);
       return null;
     }
 
     const userData = await response.json();
 
-    // Ma'lumotlar kelganini tekshiramiz
     if (!userData || !userData.id) {
       return null;
     }
 
+    // 2. Ma'lumotlarni interfeysga moslab qaytaramiz
     return {
       id: userData.id,
-      name: userData.first_name || 'Telegram User',
+      name: userData.first_name || 'Telegram Foydalanuvchisi',
       username: `@${userData.username}`,
-      avatar: userData.avatar || 'https://via.placeholder.com/150',
+      avatar: userData.avatar || 'https://via.placeholder.com/150', // Rasm bo'lmasa default rasm
     };
 
   } catch (error) {
-    // Agar bu yerga tushsa, demak Network (CORS yoki Server o'chiq) xatosi
-    console.error('Fetch jarayonida xatolik:', error);
+    // Agar bu yerga tushsa, demak: 
+    // 1. VITE_API_URL manzili xato.
+    // 2. Server (bot) o'chiq.
+    // 3. CORS ruxsat bermagan.
+    console.error('API bilan bog‘lanishda xatolik:', error);
     return null;
   }
 };

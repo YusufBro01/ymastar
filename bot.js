@@ -7,6 +7,8 @@ import cors from 'cors';
 
 dotenv.config();
 
+import puppeteer from 'puppeteer';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -17,18 +19,49 @@ const WEB_APP_URL = process.env.WEBAPP_URL;
 const app = express();
 app.use(cors()); 
 
-// 1. Build qilingan React fayllarini ulash
-// Vite odatda 'dist' papkasiga build qiladi
 const buildPath = path.join(__dirname, 'dist');
 app.use(express.static(buildPath));
 
-// 2. Foydalanuvchini qidirish API (React uchun)
+let orderCounter = 1;
+
+app.use(express.json()); // JSON formatini o'qish uchun shart!
+
+app.post('/api/create-order', async (req, res) => {
+    const { recipient, stars, price, paymentMethod, userId } = req.body;
+    const orderId = orderCounter++;
+
+    const message = 
+        `🎉 <b>Buyurtma yaratildi!</b>\n\n` +
+        `<b>ID:</b> #${orderId}\n` +
+        `<b>To'lov:</b> 💳 ${paymentMethod.toUpperCase()}\n` +
+        `<b>Qabul qiluvchi:</b> ${recipient.username}\n` +
+        `⭐ <b>${stars} Stars | ${price}</b>\n\n` +
+        `<i>Buyurtmani ko'rish uchun quyidagi tugmani bosing. 👇</i>`;
+
+    try {
+        // Sotib olayotgan odamga xabar yuboramiz
+        await bot.telegram.sendMessage(userId, message, {
+            parse_mode: 'HTML',
+            ...Markup.inlineKeyboard([
+                [Markup.button.webApp('Buyurtmani ko\'rish', WEB_APP_URL)]
+            ])
+        });
+
+        res.status(200).json({ success: true, orderId });
+    } catch (error) {
+        console.error("Xabar yuborishda xato:", error);
+        res.status(500).json({ error: "Xabar yuborib bo'lmadi" });
+    }
+});
+// 1. Foydalanuvchini qidirish API
 app.get('/api/user/:username', async (req, res) => {
   const { username } = req.params;
-  const cleanUsername = username.replace('@', '');
+  // @ belgisini tozalash va qayta qo'shish (aniqlik uchun)
+  const cleanUsername = username.trim().replace(/^@+/, '');
+  const finalUsername = `@${cleanUsername}`;
 
   try {
-    const chat = await bot.telegram.getChat(`@${cleanUsername}`);
+    const chat = await bot.telegram.getChat(finalUsername);
     
     let avatar = 'https://via.placeholder.com/150'; 
     if (chat.photo) {
@@ -48,13 +81,38 @@ app.get('/api/user/:username', async (req, res) => {
   }
 });
 
-// 3. Barcha boshqa so'rovlarga index.html ni qaytarish
-// Bu "Cannot GET /" xatosini yo'qotadi va React ishlashini ta'minlaydi
-// Express 5+ versiyasi uchun yulduzcha (*) regex ko'rinishida yoziladi
-// Express 5+ uchun barcha yo'nalishlarni tutib olishning eng to'g'ri usuli:
+// 2. React ilovasi uchun Catch-all (Express 5 mos)
 app.get(/^(?!\/api).+/, (req, res) => {
   res.sendFile(path.join(buildPath, 'index.html'));
 });
+
+async function buyStarsOnFragment(recipientUsername, starAmount) {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    
+    try {
+        // 1. Fragment Stars sahifasiga o'tish
+        await page.goto('https://fragment.com/stars');
+
+        // 2. Qabul qiluvchi usernameni yozish
+        await page.type('input[placeholder="Enter username"]', recipientUsername);
+        await page.click('.btn-primary'); // Qidirish
+
+        // 3. Star miqdorini tanlash
+        // Bu yerda starAmount ga qarab kerakli paketni tanlash logikasi bo'ladi
+        
+        // 4. TON hamyonini ulash va to'lovni tasdiqlash
+        // DIQQAT: Bu qism eng murakkab qismi, chunki TON hamyonidan 
+        // tranzaksiyani avtomatik imzolash (signing) kerak bo'ladi.
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Fragment xatosi:", error);
+        return { success: false };
+    } finally {
+        await browser.close();
+    }
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server ${PORT}-portda va Web App ishga tushdi`));
@@ -66,6 +124,7 @@ bot.telegram.setMyCommands([
   { command: 'help', description: 'Yordam' }
 ]);
 
+// START komandasi
 bot.start((ctx) => {
   const imagePath = path.join(__dirname, 'img', 'IMG_5085.PNG'); 
   const welcomeMessage = `⭐ <b>Tez Starʼga xush kelibsiz!</b> 👏\n\nViza kartasiz o'zingiz yoki do'stlaringiz uchun Telegram Premium va ⭐ olishingiz mumkin.`;
@@ -83,9 +142,52 @@ bot.start((ctx) => {
   ).catch(() => ctx.reply(welcomeMessage, { parse_mode: 'HTML' }));
 });
 
-// Referral va Help komandalari o'z joyida qoladi...
-bot.command('referral', (ctx) => { /* ... avvalgi kodingiz ... */ });
-bot.help((ctx) => { /* ... avvalgi kodingiz ... */ });
+// REFERRAL komandasi
+bot.command('referral', (ctx) => {
+  const userId = ctx.from.id;
+  // Dinamik havola yaratish (Faqat sizning ID emas, har bir user uchun)
+  const referralLink = `https://t.me/tezstar_bot/app?startapp=${userId}`;
+
+  const referralMessage = 
+    `🔗 <b>Do'stlaringizni taklif qilib Stars ishlang</b>\n\n` +
+    `Do'stlaringiz ⭐️ Tez Star orqali xarid qilsa — sizga avtomatik bonus Stars tushadi.\n` +
+    `Oddiy va qulay daromad usuli ✨\n\n` +
+    `👇 <b>Bonuslar:</b>\n` +
+    `• Premium sotib olsa — +15 ⭐️\n` +
+    `• 1000 Stars sotib olsa — +50 ⭐️\n` +
+    `• 500 Stars sotib olsa — +25 ⭐️\n` +
+    `• 100 Stars sotib olsa — +5 ⭐️\n\n` +
+    `❤️ <b>Sizning havolangiz:</b>\n${referralLink}\n\n` +
+    `⭐️ <b>Do'stlar:</b> 0 | <b>Ishlangan:</b> 0 Stars\n\n` +
+    `<a href="https://t.me/ymastars">Batafsil ma'lumot</a>`;
+
+  ctx.replyWithHTML(referralMessage, {
+    disable_web_page_preview: true,
+    ...Markup.inlineKeyboard([
+      [Markup.button.url('🚀 Ulashish', `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("⭐ Tez Star orqali Telegram Stars va Premium sotib oling!")}`)]
+    ])
+  });
+});
+
+// HELP komandasi
+bot.help((ctx) => {
+  const helpMessage = 
+    `⭐️ <b>Tez Star - Yordam</b>\n\n` +
+    `👇 <b>Mavjud buyruqlar:</b>\n\n` +
+    `/start - Botni ishga tushirish\n` +
+    `/referral - Do'stlar dasturi va referral havola\n` +
+    `/help - Ushbu yordam xabari\n\n` +
+    `💡 <b>Xizmatlar:</b>\n` +
+    `• Telegram Stars - O'yinlar, sticker, hadyalar uchun\n` +
+    `• Telegram Premium - O'zingiz yoki do'stlaringiz uchun\n\n` +
+    `🔒 <b>To'lov usullari:</b>\n` +
+    `• Click\n` +
+    `• Payme\n\n` +
+    `✉️ <b>Qo'llab-quvvatlash:</b> @yusufbe_fx\n\n` +
+    `✈️ <b>Yangiliklar kanali:</b> @ymastars`;
+
+  ctx.replyWithHTML(helpMessage);
+});
 
 bot.launch().then(() => console.log('Bot muvaffaqiyatli ishga tushdi!'));
 
