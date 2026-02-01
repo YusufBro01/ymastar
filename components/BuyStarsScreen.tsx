@@ -31,36 +31,30 @@ const BuyStarsScreen: React.FC<BuyStarsScreenProps> = ({ onCreateOrder }) => {
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'payme' | 'click' | null>(null);
 
     const handleUsernameSearch = useCallback(async (searchUsername: string) => {
-    // 1. Bo'sh yoki juda qisqa bo'lsa to'xtatamiz
-    if (searchUsername.length <= 2) { 
-        setFoundUser(null);
-        setError(null);
-        return;
-    }
-
-    setError(null);
-    setIsLoading(true);
-
-    try {
-        // AI validateUsername ni olib tashladik! 
-        // To'g'ridan-to'g'ri Bot API orqali qidiramiz.
-        const user = await findUserByUsername(searchUsername);
-
-        if (user) {
-            setFoundUser(user);
-            setError(null);
-        } else {
+        if (searchUsername.length <= 1) {
             setFoundUser(null);
-            setError(t('userNotFound')); // "Foydalanuvchi topilmadi"
+            setError(null);
+            return;
         }
-    } catch (err) {
-        console.error("Search Error:", err);
-        setError('Server bilan bog‘lanishda xato yuz berdi.');
-        setFoundUser(null);
-    } finally {
-        setIsLoading(false);
-    }
-}, [t]);
+        setError(null);
+        setIsLoading(true);
+        try {
+            const isValid = await validateUsername(searchUsername);
+            if (isValid) {
+                const user = await findUserByUsername(searchUsername);
+                setFoundUser(user);
+            } else {
+                setFoundUser(null);
+                setError(t('userNotFound'));
+            }
+        } catch (err) {
+            console.error(err);
+            setError('An error occurred during validation.');
+            setFoundUser(null);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [t]);
     
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -88,20 +82,27 @@ const BuyStarsScreen: React.FC<BuyStarsScreenProps> = ({ onCreateOrder }) => {
     };
 
     const handleConfirmPurchase = async () => {
+    // Agar hamma ma'lumotlar tanlangan bo'lsa
     if (foundUser && selectedPlan && selectedPaymentMethod) {
-        setIsLoading(true); // Yuklanish indikatorini yoqamiz
+        setIsLoading(true);
 
-        // Botga yuboriladigan ma'lumotlar
+        // Telegram WebApp ma'lumotlarini olish
+        const tg = (window as any).Telegram?.WebApp;
+        const senderId = tg?.initDataUnsafe?.user?.id; // Bot SMS yuborishi uchun kerak
+
         const orderData = {
-            recipient: foundUser,
+            recipient: {
+                username: foundUser.username,
+                name: foundUser.name
+            },
             stars: selectedPlan.stars,
             price: selectedPlan.priceFormatted,
             paymentMethod: selectedPaymentMethod,
-            // Ilovani kim ishlatayotgan bo'lsa, o'shaning IDsi (bot unga SMS yuboradi)
-            senderId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id 
+            senderId: senderId
         };
 
         try {
+            // Backend manzilingiz
             const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ymastar-production.up.railway.app';
             
             const response = await fetch(`${API_BASE_URL}/api/create-order`, {
@@ -112,14 +113,14 @@ const BuyStarsScreen: React.FC<BuyStarsScreenProps> = ({ onCreateOrder }) => {
 
             if (response.ok) {
                 setConfirmModalOpen(false);
-                // Muvaffaqiyatli bo'lsa, WebApp ni yopamiz, foydalanuvchi botga qaytadi
-                window.Telegram?.WebApp?.close();
+                // Muvaffaqiyatli bo'lsa, ilovani yopamiz - foydalanuvchi botga qaytadi
+                if (tg) tg.close();
             } else {
-                setError("Buyurtma berishda xatolik yuz berdi.");
+                alert("Xatolik: Botga buyurtma yuborib bo'lmadi.");
             }
         } catch (err) {
-            console.error(err);
-            setError("Server bilan bog'lanishda xato.");
+            console.error("Fetch error:", err);
+            alert("Server bilan bog'lanishda xato.");
         } finally {
             setIsLoading(false);
         }

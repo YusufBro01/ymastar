@@ -1,20 +1,18 @@
 import type { User } from '../types';
 
-// Railway manzilingizni tekshiring (oxirida slash bo'lmasin)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://tez-star-production.up.railway.app';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ymastar-production.up.railway.app';
 
 export const findUserByUsername = async (username: string): Promise<User | null> => {
-  // 1. Foydalanuvchi kiritgan matnni tozalaymiz
-  // Boshidagi barcha @ belgilarini va bo'sh joylarni olib tashlaymiz
+  // 1. Bo'sh joylarni olib tashlaymiz va boshidagi barcha @ belgilarini tozalaymiz
   const cleanUsername = username.trim().replace(/^@+/, '');
   
+  // Username kamida 3 ta belgidan iborat bo'lishi shart
   if (cleanUsername.length < 3) return null;
 
   try {
-    const targetUrl = `${API_BASE_URL}/api/user/${cleanUsername}`;
-    console.log(`Telegram qidiruv so'rovi yuborilmoqda: ${targetUrl}`);
-
-    const response = await fetch(targetUrl, {
+    console.log(`Searching for: @${cleanUsername}`);
+    
+    const response = await fetch(`${API_BASE_URL}/api/user/${cleanUsername}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -22,30 +20,22 @@ export const findUserByUsername = async (username: string): Promise<User | null>
     });
 
     if (!response.ok) {
-      console.warn(`Foydalanuvchi topilmadi (Status: ${response.status})`);
+      console.warn(`User topilmadi yoki API xatosi: ${response.status}`);
       return null;
     }
 
     const userData = await response.json();
 
-    if (!userData || !userData.id) {
-      return null;
-    }
-
-    // 2. Ma'lumotlarni interfeysga moslab qaytaramiz
     return {
       id: userData.id,
-      name: userData.first_name || 'Telegram Foydalanuvchisi',
+      name: userData.first_name || 'Telegram User',
       username: `@${userData.username}`,
-      avatar: userData.avatar || 'https://via.placeholder.com/150', // Rasm bo'lmasa default rasm
+      avatar: userData.avatar || 'https://via.placeholder.com/150', // Rasm bo'lmasa default
     };
 
   } catch (error) {
-    // Agar bu yerga tushsa, demak: 
-    // 1. VITE_API_URL manzili xato.
-    // 2. Server (bot) o'chiq.
-    // 3. CORS ruxsat bermagan.
-    console.error('API bilan bog‘lanishda xatolik:', error);
+    // Agar bu yerga tushsa, CORS yoki tarmoq xatosi bor
+    console.error('API Error (Check CORS or Server):', error);
     return null;
   }
 };

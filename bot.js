@@ -17,8 +17,12 @@ const WEB_APP_URL = process.env.WEBAPP_URL;
 
 // --- API VA SERVER QISMI ---
 const app = express();
-app.use(cors()); 
-
+app.use(cors({
+    origin: '*', // Barcha manzil va IP-lardan so'rov qabul qiladi
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    credentials: true
+}));
 const buildPath = path.join(__dirname, 'dist');
 app.use(express.static(buildPath));
 
@@ -26,59 +30,83 @@ let orderCounter = 1;
 
 app.use(express.json()); // JSON formatini o'qish uchun shart!
 
+
+// 1. Foydalanuvchini qidirish API
+app.get('/api/user/:username', async (req, res) => {
+    try {
+        const { username } = req.params;
+        // Username-ni tozalab, @ belgisini qo'shamiz
+        const cleanUsername = `@${username.replace(/^@+/, '')}`;
+        
+        console.log(`Qidirilmoqda: ${cleanUsername}`);
+
+        // Telegramdan chat ma'lumotlarini olish
+        const chat = await bot.telegram.getChat(cleanUsername);
+        
+        // Profil rasmini olish
+        let avatar = 'https://via.placeholder.com/150'; // Default rasm
+        if (chat.photo && chat.photo.big_file_id) {
+            const fileLink = await bot.telegram.getFileLink(chat.photo.big_file_id);
+            avatar = fileLink.href;
+        }
+
+        // Web App-ga ma'lumotni qaytarish
+        res.json({
+            id: chat.id,
+            first_name: chat.first_name || chat.title || "Telegram User",
+            username: chat.username,
+            avatar: avatar
+        });
+
+    } catch (error) {
+        console.error("Telegram Search Error:", error.message);
+        res.status(404).json({ error: "Foydalanuvchi topilmadi" });
+    }
+});
+
+// Kodning tepasida bular borligiga ishonch hosil qiling:
+// const { Markup } = require('telegraf'); 
+// const WEB_APP_URL = process.env.WEB_APP_URL || 'sizning_web_app_manzilingiz';
+
 app.post('/api/create-order', async (req, res) => {
+    // userId bu yerda foydalanuvchining Telegram ID-si bo'lishi kerak
     const { recipient, stars, price, paymentMethod, userId } = req.body;
+
+    if (!userId) {
+        return res.status(400).json({ error: "Foydalanuvchi ID-si (userId) yuborilmadi" });
+    }
+
     const orderId = orderCounter++;
+    const methodEmoji = paymentMethod.toLowerCase() === 'click' ? '💳 Click' : '🔹 Payme';
 
     const message = 
         `🎉 <b>Buyurtma yaratildi!</b>\n\n` +
         `<b>ID:</b> #${orderId}\n` +
-        `<b>To'lov:</b> 💳 ${paymentMethod.toUpperCase()}\n` +
+        `<b>To'lov:</b> ${methodEmoji}\n` +
         `<b>Qabul qiluvchi:</b> ${recipient.username}\n` +
         `⭐ <b>${stars} Stars | ${price}</b>\n\n` +
-        `<i>Buyurtmani ko'rish uchun quyidagi tugmani bosing. 👇</i>`;
+        `<i>To'lovni amalga oshirish yoki buyurtmani ko'rish uchun pastdagi tugmani bosing. 👇</i>`;
 
     try {
-        // Sotib olayotgan odamga xabar yuboramiz
+        // Telegram Bot orqali foydalanuvchiga xabar yuborish
         await bot.telegram.sendMessage(userId, message, {
             parse_mode: 'HTML',
             ...Markup.inlineKeyboard([
-                [Markup.button.webApp('Buyurtmani ko\'rish', WEB_APP_URL)]
+                [Markup.button.webApp('💳 To\'lov qilish / Ko\'rish', WEB_APP_URL)]
             ])
         });
 
+        console.log(`Buyurtma #${orderId} uchun @${userId} ga xabar yuborildi.`);
         res.status(200).json({ success: true, orderId });
+
     } catch (error) {
-        console.error("Xabar yuborishda xato:", error);
-        res.status(500).json({ error: "Xabar yuborib bo'lmadi" });
+        console.error("Telegram xabar yuborishda xato:", error.message);
+        
+        // Agar foydalanuvchi botni bloklagan bo'lsa yoki hali start bosmagan bo'lsa
+        res.status(500).json({ 
+            error: "Bot foydalanuvchiga xabar yubora olmadi. Botni bloklamaganingizga ishonch hosil qiling." 
+        });
     }
-});
-// 1. Foydalanuvchini qidirish API
-app.get('/api/user/:username', async (req, res) => {
-  const { username } = req.params;
-  // @ belgisini tozalash va qayta qo'shish (aniqlik uchun)
-  const cleanUsername = username.trim().replace(/^@+/, '');
-  const finalUsername = `@${cleanUsername}`;
-
-  try {
-    const chat = await bot.telegram.getChat(finalUsername);
-    
-    let avatar = 'https://via.placeholder.com/150'; 
-    if (chat.photo) {
-      const photoLink = await bot.telegram.getFileLink(chat.photo.big_file_id);
-      avatar = photoLink.href;
-    }
-
-    res.json({
-      id: chat.id,
-      username: chat.username,
-      first_name: chat.first_name,
-      avatar: avatar
-    });
-  } catch (error) {
-    console.error("Qidiruvda xato:", error.message);
-    res.status(404).json({ error: 'User not found' });
-  }
 });
 
 // 2. React ilovasi uchun Catch-all (Express 5 mos)
@@ -99,6 +127,7 @@ async function buyStarsOnFragment(recipientUsername, starAmount) {
         await page.click('.btn-primary'); // Qidirish
 
         // 3. Star miqdorini tanlash
+
         // Bu yerda starAmount ga qarab kerakli paketni tanlash logikasi bo'ladi
         
         // 4. TON hamyonini ulash va to'lovni tasdiqlash
