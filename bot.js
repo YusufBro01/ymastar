@@ -77,7 +77,7 @@ bot.start((ctx) => {
       parse_mode: 'HTML',
       ...Markup.inlineKeyboard([
         [Markup.button.webApp('Ilovani ochish 🚀', WEB_APP_URL)],
-        [Markup.button.url('Kanalimizga a’zo bo‘ling', 'https://t.me/tezstar')]
+        [Markup.button.url('Kanalimizga a’zo bo‘ling', 'https://t.me/ymastars')]
       ])
     }
   ).catch(() => ctx.reply(welcomeMessage, { parse_mode: 'HTML' }));
