@@ -51,7 +51,7 @@ app.get('/api/user/:username', async (req, res) => {
 // 3. Barcha boshqa so'rovlarga index.html ni qaytarish
 // Bu "Cannot GET /" xatosini yo'qotadi va React ishlashini ta'minlaydi
 // Express 5+ versiyasi uchun yulduzcha (*) regex ko'rinishida yoziladi
-app.get('(.*)', (req, res) => {
+app.get('/:any*', (req, res) => {
   res.sendFile(path.join(buildPath, 'index.html'));
 });
 
