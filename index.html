@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tez Star</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai"
+  }
+}
+</script>
+<style>
+    :root {
+      --bg-primary: #F5F6F8;
+      --bg-secondary: #FFFFFF;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --header-bg: rgba(255, 255, 255, 0.8);
+      --input-bg: #FFFFFF;
+      --toggle-bg: #E9E9EB;
+      --toggle-slider-bg: #FFFFFF;
+      --toggle-text-active: #111827;
+      --toggle-text-inactive: #6B7280;
+      --button-secondary-bg: #E9E9EB;
+      --button-secondary-text: #111827;
+    }
+
+    .dark {
+      --bg-primary: #121212;
+      --bg-secondary: #1E1E1E;
+      --text-primary: #E5E7EB;
+      --text-secondary: #9CA3AF;
+      --header-bg: rgba(30, 30, 30, 0.8);
+      --input-bg: #2A2A2A;
+      --toggle-bg: #3A3A3C;
+      --toggle-slider-bg: #5C5C5E;
+      --toggle-text-active: #FFFFFF;
+      --toggle-text-inactive: #9CA3AF;
+      --button-secondary-bg: #2C2C2E;
+      --button-secondary-text: #E5E7EB;
+    }
+    
+    .bg-skin-primary { background-color: var(--bg-primary); }
+    .bg-skin-secondary { background-color: var(--bg-secondary); }
+    .text-skin-primary { color: var(--text-primary); }
+    .text-skin-secondary { color: var(--text-secondary); }
+    .bg-skin-header-bg { background-color: var(--header-bg); }
+    .bg-skin-input { background-color: var(--input-bg); }
+    .bg-skin-toggle { background-color: var(--toggle-bg); }
+    .bg-skin-toggle-slider { background-color: var(--toggle-slider-bg); }
+    .text-skin-toggle-active { color: var(--toggle-text-active); }
+    .text-skin-toggle-inactive { color: var(--toggle-text-inactive); }
+    .bg-skin-button-secondary { background-color: var(--button-secondary-bg); }
+    .text-skin-button-secondary { color: var(--button-secondary-text); }
+
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    .shimmer-effect {
+      animation: shimmer 2s infinite;
+      background: linear-gradient(to right, #f6f7f8 0%, #e3e4e6 50%, #f6f7f8 100%);
+      background-size: 200% 100%;
+    }
+
+    @keyframes glow {
+      0% {
+        box-shadow: 0 0 3px #ffffff, 0 0 6px #ffffff, 0 0 9px #2AABEE;
+      }
+      50% {
+        box-shadow: 0 0 6px #ffffff, 0 0 12px #ffffff, 0 0 18px #2AABEE;
+      }
+      100% {
+        box-shadow: 0 0 3px #ffffff, 0 0 6px #ffffff, 0 0 9px #2AABEE;
+      }
+    }
+    .glow-effect {
+      animation: glow 2.5s infinite ease-in-out;
+    }
+    
+    @keyframes fade-in-down {
+      0% {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in-down {
+      animation: fade-in-down 0.3s ease-out forwards;
+    }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-skin-primary text-skin-primary">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

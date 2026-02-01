@@ -1,0 +1,5 @@
+{
+  "name": "Tez Star Mini App",
+  "description": "A mini-app interface for buying and managing Telegram Stars, including a profile section and referral program, designed to replicate a specific UI.",
+  "requestFramePermissions": []
+}
