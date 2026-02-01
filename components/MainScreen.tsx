@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { View, OrderDetails } from '../types';
 import { PremiumIcon } from './icons/PremiumIcon';
@@ -17,6 +16,13 @@ interface MainScreenProps {
 const MainScreen: React.FC<MainScreenProps> = ({ onNavigate, pendingOrder, onLanguageClick, onViewPendingOrder }) => {
     const [activeTab, setActiveTab] = useState<'stars' | 'premium'>('stars');
     const { t } = useLocalization();
+
+    // 1. Telegram WebApp SDK dan foydalanuvchi ma'lumotlarini olish
+    const tg = (window as any).Telegram?.WebApp;
+    const user = tg?.initDataUnsafe?.user;
+
+    // Rasm bo'lmasa, ismining bosh harfi bilan chiroyli avatar hosil qilamiz
+    const userAvatar = user?.photo_url || `https://ui-avatars.com/api/?name=${user?.first_name || 'U'}&background=2AABEE&color=fff`;
 
     const cardContent = {
         stars: {
@@ -49,12 +55,22 @@ const MainScreen: React.FC<MainScreenProps> = ({ onNavigate, pendingOrder, onLan
     const currentContent = cardContent[activeTab];
 
     return (
-        <div className="p-4 flex flex-col h-full bg-skin-primary">
+        <div className="p-4 flex flex-col h-full bg-skin-primary min-h-screen">
              {/* Top controls */}
             <div className="flex items-center justify-between pt-2">
-                 <button onClick={() => onNavigate('profile')} className="w-10 h-10">
-                    <img src="https://picsum.photos/seed/yusuf/200/200" className="w-10 h-10 rounded-full" alt="Profile"/>
+                 {/* Profil tugmasi - Endi dinamik */}
+                 <button onClick={() => onNavigate('profile')} className="w-10 h-10 active:scale-90 transition-transform">
+                    <img 
+                        src={userAvatar} 
+                        className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 shadow-sm object-cover" 
+                        alt="Profile"
+                        onError={(e) => {
+                            // Agar rasm yuklanmasa, default avatar qo'yish
+                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${user?.first_name || 'U'}&background=random`;
+                        }}
+                    />
                 </button>
+
                 <div className="relative flex items-center bg-skin-toggle p-1 rounded-full">
                     <div 
                         className={`absolute top-1 bottom-1 w-[calc(50%-2px)] bg-skin-toggle-slider shadow-sm rounded-full transition-transform duration-300 ease-in-out`}
@@ -71,20 +87,20 @@ const MainScreen: React.FC<MainScreenProps> = ({ onNavigate, pendingOrder, onLan
                         {t('premium')}
                     </button>
                 </div>
-                 <button onClick={onLanguageClick} className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                 <button onClick={onLanguageClick} className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center active:scale-90 transition-transform">
                     <GlobeIcon className="text-white w-7 h-7" />
                 </button>
             </div>
 
             {/* Main Card (centered) */}
             <div className="flex-grow flex items-center justify-center">
-                 <div className="bg-skin-secondary rounded-3xl p-6 text-center shadow-sm w-full max-w-sm">
+                 <div className="bg-skin-secondary rounded-3xl p-6 text-center shadow-lg w-full max-w-sm animate-fade-in-down">
                     {currentContent.icon}
                     <h2 className="text-2xl font-bold mb-2 text-skin-primary">{currentContent.title}</h2>
                     <p className="text-skin-secondary mb-6">{currentContent.description}</p>
                     <button 
                         onClick={currentContent.action}
-                        className="w-full bg-[#2AABEE] text-white font-semibold py-3.5 rounded-2xl text-lg h-14 glow-effect">
+                        className="w-full bg-[#2AABEE] text-white font-semibold py-3.5 rounded-2xl text-lg h-14 glow-effect active:scale-95 transition-transform">
                         {currentContent.buttonText}
                     </button>
                 </div>
@@ -92,8 +108,8 @@ const MainScreen: React.FC<MainScreenProps> = ({ onNavigate, pendingOrder, onLan
 
             {/* Pending Payment */}
             {pendingOrder && (
-                <div className="mt-auto">
-                    <button onClick={onViewPendingOrder} className="w-full bg-skin-secondary rounded-2xl p-3 flex items-center justify-between cursor-pointer border border-blue-400 text-left">
+                <div className="mt-auto pt-4">
+                    <button onClick={onViewPendingOrder} className="w-full bg-skin-secondary rounded-2xl p-4 flex items-center justify-between cursor-pointer border-2 border-blue-400 text-left animate-bounce-subtle">
                         <div className="flex items-center gap-3">
                             <GoldStarIcon className="w-8 h-8"/>
                             <div>

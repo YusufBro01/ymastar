@@ -68,8 +68,8 @@ const App: React.FC = () => {
 
   const renderHeader = () => {
     const headerProps = {
-        title: "Yma Star",
-        subtitle: "mini ilova",
+        title: "",
+        subtitle: "",
     };
 
     switch (view) {
@@ -79,7 +79,7 @@ const App: React.FC = () => {
       case 'buy':
       case 'premium':
       case 'orderSuccess':
-        return <Header {...headerProps} leftButton="back" rightButton={true} onBack={() => setView(view === 'orderSuccess' ? 'buy' : 'main')} />;
+        return <Header {...headerProps} leftButton="back"  onBack={() => setView(view === 'orderSuccess' ? 'buy' : 'main')} />;
       default:
         return null;
     }

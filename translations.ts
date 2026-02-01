@@ -1,7 +1,7 @@
 
 export const translations = {
   uz: {
-    miniApp: "mini ilova",
+    miniApp: "",
     back: "Orqaga",
     yopish: "Yopish",
     stars: "Stars",
@@ -69,7 +69,7 @@ export const translations = {
     paymentPending: "To'lov kutilmoqda",
   },
   ru: {
-    miniApp: "мини-приложение",
+    miniApp: "",
     back: "Назад",
     yopish: "Закрыть",
     stars: "Stars",
@@ -137,7 +137,7 @@ export const translations = {
     paymentPending: "Ожидание платежа",
   },
   en: {
-    miniApp: "mini app",
+    miniApp: "",
     back: "Back",
     yopish: "Close",
     stars: "Stars",

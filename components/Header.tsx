@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({
       </div>
       <div className="w-1/3 text-center">
         <h1 className="font-bold text-lg text-skin-primary">{title}</h1>
-        <p className="text-sm text-skin-secondary">{t('miniApp')}</p>
+        <p className="text-sm text-skin-secondary">{t('')}</p>
       </div>
       <div className="w-1/3 flex justify-end">
          {rightButton && (
